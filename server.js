@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const multer = require('multer');
+const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 const OpenAI = require('openai');
 const cloudinary = require('cloudinary').v2;
@@ -21,6 +22,9 @@ app.use(cors({
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+
+// Serve static files from public directory
+app.use(express.static('public'));
 
 // Configure Cloudinary
 cloudinary.config({
@@ -257,9 +261,15 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Endpoint not found' });
+// Serve the main HTML file for all non-API routes
+app.get('*', (req, res) => {
+  // Don't serve HTML for API routes
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Endpoint not found' });
+  }
+  
+  // Serve the main HTML file for all other routes
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start server

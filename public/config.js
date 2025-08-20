@@ -11,7 +11,7 @@ if (typeof process !== 'undefined' && process.env && process.env.BACKEND_URL) {
 } else {
   // For production, this will be set by Render environment variable
   // We'll use a placeholder that gets replaced during build
-  BACKEND_URL = 'https://chinese-tutor-backend.onrender.com';
+  BACKEND_URL = 'https://chinese-tutor.onrender.com';
 }
 
 // API endpoints
