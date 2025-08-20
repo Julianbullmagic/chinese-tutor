@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chinese Character Mnemonics</title>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
+
+
   <script src="https://unpkg.com/pinyin@2/dist/pinyin.min.js"></script>
 
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -1197,9 +1197,7 @@ canvas {
     // DOM Ready & Init
     // ======================
     document.addEventListener('DOMContentLoaded', function() {
-      const supabaseUrl = 'https://nbubugthsamfqubbrzxz.supabase.co';
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5idWJ1Z3Roc2FtZnF1YmJyenh6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwODk4MzYsImV4cCI6MjA2ODY2NTgzNn0.IMseuNXSYvAhDuw4S0JMCQeyv50U9-NtqP-D-vv0E2Q';
-      window.supabase = supabase.createClient(supabaseUrl, supabaseKey);
+      // Supabase client is now handled by the backend API
       setupCanvas(document.getElementById('characterCanvas'));
       setupCanvas(document.getElementById('mnemonicCanvas'));
       
