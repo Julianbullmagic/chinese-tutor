@@ -88,6 +88,45 @@
   margin: 24px 0;
 }
 
+.paste-instructions {
+  background: #f0f8ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.paste-instructions p {
+  margin: 0;
+  color: #0066cc;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Success message animations */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
 @media (min-width: 768px) {
   .canvas-section {
     flex-direction: row; /* Side-by-side on desktop */
@@ -655,6 +694,10 @@ canvas {
         <input type="text" id="hint-input" placeholder="e.g., 'tree + sun = rest' or any memory aid" required>
       </div>
   <div class="canvas-section">
+    <div class="paste-instructions">
+      <p><strong>💡 Pro Tip:</strong> You can paste Chinese characters directly from your AI conversations! Just copy a character (like 你, 好, 学) and paste it onto either canvas using Ctrl+V or right-click → Paste. Characters will appear centered and can be dragged and resized.</p>
+    </div>
+    
     <!-- Character Canvas -->
     <div class="canvas-container">
       <div class="canvas-header">
@@ -3054,12 +3097,246 @@ canvas.addEventListener('touchmove', function(e) {
     
     canvas.addEventListener('touchend', endDrawing);
 
-    // Clear  uploadToCloudinary
+    // Clear canvas
     document.getElementById(canvasInfo.clearId).addEventListener('click', function() {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Clear any pasted characters
+      canvas.pastedCharacters = [];
     });
+
+    // Initialize pasted characters array for this canvas
+    canvas.pastedCharacters = [];
+
+    // Add paste functionality for Chinese characters
+    canvas.addEventListener('paste', function(e) {
+      e.preventDefault();
+      const text = e.clipboardData.getData('text');
+      
+      // Check if the pasted text contains Chinese characters
+      const chineseChars = text.match(/[\u4e00-\u9fff]/g);
+      if (chineseChars && chineseChars.length > 0) {
+        chineseChars.forEach(char => {
+          addPastedCharacter(canvas, char);
+        });
+      }
+    });
+
+    // Add keyboard shortcut for pasting (Ctrl+V)
+    canvas.addEventListener('keydown', function(e) {
+      if (e.ctrlKey && e.key === 'v') {
+        e.preventDefault();
+        navigator.clipboard.readText().then(text => {
+          const chineseChars = text.match(/[\u4e00-\u9fff]/g);
+          if (chineseChars && chineseChars.length > 0) {
+            chineseChars.forEach(char => {
+              addPastedCharacter(canvas, char);
+            });
+          }
+        });
+      }
+    });
+
+    // Make canvas focusable for keyboard events
+    canvas.tabIndex = 0;
+    
+    // Setup character interaction (dragging and resizing)
+    setupCharacterInteraction(canvas);
   });
+}
+
+// Function to add pasted Chinese characters to canvas
+function addPastedCharacter(canvas, char) {
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  
+  // Calculate default size and position
+  const canvasWidth = rect.width;
+  const canvasHeight = rect.height;
+  
+  // Default character size (fills most of canvas)
+  const defaultSize = Math.min(canvasWidth, canvasHeight) * 0.6;
+  
+  // Default position (center of canvas)
+  const x = (canvasWidth - defaultSize) / 2;
+  const y = (canvasHeight - defaultSize) / 2;
+  
+  // Create character object
+  const character = {
+    char: char,
+    x: x,
+    y: y,
+    size: defaultSize,
+    isDragging: false,
+    isResizing: false,
+    dragOffset: { x: 0, y: 0 },
+    resizeHandle: { x: x + defaultSize, y: y + defaultSize }
+  };
+  
+  // Add to canvas's pasted characters array
+  canvas.pastedCharacters.push(character);
+  
+  // Redraw canvas with all characters
+  redrawCanvasWithCharacters(canvas);
+  
+  // Show success message
+  showPasteSuccess(char);
+}
+
+// Function to redraw canvas with all pasted characters
+function redrawCanvasWithCharacters(canvas) {
+  const ctx = canvas.getContext('2d');
+  
+  // Clear canvas
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Redraw all pasted characters
+  canvas.pastedCharacters.forEach(charObj => {
+    drawCharacterOnCanvas(canvas, charObj);
+  });
+}
+
+// Function to draw a character on canvas
+function drawCharacterOnCanvas(canvas, charObj) {
+  const ctx = canvas.getContext('2d');
+  
+  // Set font
+  ctx.font = `${charObj.size}px "Microsoft YaHei", "SimHei", "SimSun", sans-serif`;
+  ctx.fillStyle = '#000000';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  
+  // Draw character
+  ctx.fillText(charObj.char, charObj.x, charObj.y);
+  
+  // Draw resize handle (small blue square)
+  const handleSize = 8;
+  ctx.fillStyle = '#0066cc';
+  ctx.fillRect(charObj.resizeHandle.x - handleSize/2, charObj.resizeHandle.y - handleSize/2, handleSize, handleSize);
+}
+
+// Add mouse events for dragging and resizing characters
+function setupCharacterInteraction(canvas) {
+  let selectedCharacter = null;
+  let isDragging = false;
+  let isResizing = false;
+  
+  // Add mouse move for cursor changes
+  canvas.addEventListener('mousemove', function(e) {
+    const pos = getCanvasPosition(e, canvas);
+    const char = findCharacterAtPosition(canvas, pos.x, pos.y);
+    
+    if (char) {
+      if (isOverResizeHandle(char, pos.x, pos.y)) {
+        canvas.style.cursor = 'nw-resize';
+      } else {
+        canvas.style.cursor = 'move';
+      }
+    } else {
+      canvas.style.cursor = 'default';
+    }
+  });
+  
+  canvas.addEventListener('mousedown', function(e) {
+    const pos = getCanvasPosition(e, canvas);
+    const char = findCharacterAtPosition(canvas, pos.x, pos.y);
+    
+    if (char) {
+      if (isOverResizeHandle(char, pos.x, pos.y)) {
+        isResizing = true;
+        selectedCharacter = char;
+      } else {
+        isDragging = true;
+        selectedCharacter = char;
+        char.dragOffset = {
+          x: pos.x - char.x,
+          y: pos.y - char.y
+        };
+      }
+    }
+  });
+  
+  canvas.addEventListener('mousemove', function(e) {
+    if (isDragging && selectedCharacter) {
+      const pos = getCanvasPosition(e, canvas);
+      selectedCharacter.x = pos.x - selectedCharacter.dragOffset.x;
+      selectedCharacter.y = pos.y - selectedCharacter.dragOffset.y;
+      selectedCharacter.resizeHandle.x = selectedCharacter.x + selectedCharacter.size;
+      selectedCharacter.resizeHandle.y = selectedCharacter.y + selectedCharacter.size;
+      redrawCanvasWithCharacters(canvas);
+          } else if (isResizing && selectedCharacter) {
+        const pos = getCanvasPosition(e, canvas);
+        const newSize = Math.max(20, pos.x - selectedCharacter.x);
+        selectedCharacter.size = newSize;
+        selectedCharacter.resizeHandle.x = selectedCharacter.x + newSize;
+        selectedCharacter.resizeHandle.y = selectedCharacter.y + newSize;
+        redrawCanvasWithCharacters(canvas);
+      }
+  });
+  
+  canvas.addEventListener('mouseup', function() {
+    isDragging = false;
+    isResizing = false;
+    selectedCharacter = null;
+  });
+}
+
+// Helper function to get canvas position
+function getCanvasPosition(e, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
+}
+
+// Helper function to find character at position
+function findCharacterAtPosition(canvas, x, y) {
+  return canvas.pastedCharacters.find(char => 
+    x >= char.x && x <= char.x + char.size &&
+    y >= char.y && y <= char.y + char.size
+  );
+}
+
+// Helper function to check if mouse is over resize handle
+function isOverResizeHandle(char, x, y) {
+  const handleSize = 8;
+  return x >= char.resizeHandle.x - handleSize/2 && 
+         x <= char.resizeHandle.x + handleSize/2 &&
+         y >= char.resizeHandle.y - handleSize/2 && 
+         y <= char.resizeHandle.y + handleSize/2;
+}
+
+// Function to show paste success message
+function showPasteSuccess(char) {
+  // Create a temporary success message
+  const message = document.createElement('div');
+  message.textContent = `✅ Added: ${char}`;
+  message.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10b981;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    z-index: 1000;
+    animation: slideIn 0.3s ease-out;
+  `;
+  
+  document.body.appendChild(message);
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    message.style.animation = 'slideOut 0.3s ease-in';
+    setTimeout(() => {
+      if (message.parentNode) {
+        message.parentNode.removeChild(message);
+      }
+    }, 300);
+  }, 3000);
 }
  //getPosition   
     window.deleteCharacter = deleteCharacter;
